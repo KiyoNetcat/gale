@@ -77,8 +77,6 @@ jobs:
         id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
         with:
           tagName: __VERSION__
           releaseName: '__VERSION__'
@@ -91,41 +89,3 @@ jobs:
         run: |
           SHA256=$(sha256sum src-tauri/target/release/bundle/appimage/*.AppImage | awk '{print $1}')
           echo "sha256=$SHA256" >> $GITHUB_OUTPUT
-
-  publish:
-    name: Publish
-    runs-on: ubuntu-24.04
-    needs: build
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Download release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release download ${{ needs.build.outputs.appVersion }} --repo ${{ github.repository }}
-
-      - name: Move msi installer to bundle directory
-        run: |
-          mkdir -p src-tauri/target/release/bundle/msi
-          mv *.msi src-tauri/target/release/bundle/msi
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 8.0.x
-
-      - name: Install Thunderstore CLI
-        run: dotnet tool install -g tcli
-
-      - name: Publish to Thunderstore
-        env:
-          TCLI_AUTH_TOKEN: ${{ secrets.THUNDERSTORE_TOKEN }}
-        run: tcli publish --package-version ${{ needs.build.outputs.appVersion }}
-
-      - name: Update latest.json Github gist
-        uses: exuanbo/actions-deploy-gist@v1
-        with:
-          token: ${{ secrets.GIST_TOKEN }}
-          gist_id: 58b4f08009e7b7b5baaea253ebccb94d
-          gist_description: Auto-updater endpoint for gale
-          file_path: latest.json
